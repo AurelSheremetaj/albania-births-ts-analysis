@@ -1,7 +1,7 @@
 # Time Series Analysis of Births in Albania
 
 ## Description
-This project analyzes birth data in Albania using time series methods.
+This project analyzes birth data in Albania using time series methods on R programming language.
 The goal is to study trends, seasonality, and patterns over time.
 
 ## Data
