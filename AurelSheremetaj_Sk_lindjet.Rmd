@@ -1,0 +1,1279 @@
+---
+title: "Aurel Sheremetaj Lindjet"
+author: "Aurel Sheremetaj"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    theme: united
+    toc: true
+    toc_float: true
+    df_print: paged
+---
+
+# Hyrje
+
+Qëllimi i këtij studimi është analiza e tendencave dhe lidhjeve mes tre treguesve kryesorë për ekonominë dhe zhvillimin shoqëror të Shqipërisë gjatë periudhës 2011–2025, përmes të dhënave tremujore. Të dhënat përfshijnë: (1) numrin e lindjeve në Shqipëri nga tremujori i parë i vitit 2011 deri në tremujorin e dytë të vitit 2025, (2) indeksin tremujor të çmimeve të importit të Shqipërisë nga tremujori i parë i vitit 2012 deri në tremujorin e dytë të vitit 2025, dhe (3) bilancin tremujor të energjisë elektrike për eksportet bruto të Shqipërisë për të njëjtën periudhë. Këto seri kohore përfaqësojnë tre dimensione të ndryshme të zhvillimit kombëtar – demografik, ekonomik dhe energjetik – të cilat janë të ndërlidhura në mënyrë sistematike dhe ndikojnë ndërsjelltë në stabilitetin dhe performancën e vendit.Në datasetin e parë, treguesi i lindjeve pasqyron ecurinë demografike të vendit, si dhe ndryshimet strukturore që lidhen me faktorë ekonomikë, emigracionin dhe politikat sociale. Këto të dhëna do të analizohen për të identifikuar trendet afatgjata, stinorësinë dhe mundësitë për parashikim të numrit të lindjeve në të ardhmen. Në datasetin e dytë, analiza fokusohet në indeksin e çmimeve të importit, i cili është tregues i rëndësishëm i dinamikës së tregtisë së jashtme dhe i presioneve të inflacionit që ndikojnë në ekonominë shqiptare. Duke analizuar këtë seri kohore, synohet të vlerësohen ndryshimet ciklike dhe ndikimet e faktorëve globalë në çmimet e importit për vendin. Dataseti i tretë përfshin bilancin tremujor të energjisë elektrike për eksportet bruto, një tregues kyç për kapacitetin energjetik të Shqipërisë, i cili ndikohet drejtpërdrejt nga kushtet klimatike, prodhimi hidroenergjetik dhe kërkesa e tregut rajonal. Ky tregues ndihmon të kuptohet më mirë roli i sektorit energjetik në ekonominë shqiptare dhe kontributi i tij në balancën tregtare.Secili prej tre treguesve do të analizohet përmes metodave statistikore të serive kohore në R Studio, duke përfshirë vizualizimin, dekompozimin në komponentët trend, sezonë dhe rastësorë, si dhe ndërtimin e modeleve për parashikim .Parashikimi i saktë i këtyre treguesve ndihmon në formulimin e politikave afatgjata për zhvillim të qëndrueshëm, menaxhim të burimeve natyrore dhe planifikim të tregut të punës. Përmes këtij punimi synohet të krijohet një kuptim gjithëpërfshirës mbi mënyrën se si ndryshimet në faktorët demografikë, ekonominë e jashtme dhe energjinë ndikojnë në performancën makroekonomike të Shqipërisë dhe si mund të përdoren metodat e statistikës moderne për të parashikuar ecurinë e tyre në të ardhmen.
+
+---
+
+
+
+
+# Paraqitja grafike
+
+```{r}
+library(readxl)
+
+data <- read_excel("C:\\Users\\35569\\OneDrive\\Documents\\Lindjet 3 mujor.xlsx")  
+head(data)
+
+
+
+
+
+```
+
+```{r}
+library(ggplot2)
+library(forecast)
+library(dplyr)
+library(tidyr)
+```
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+data <- data %>%
+  separate(Koha, into = c("Viti", "Tremujori"), sep = "-", convert = TRUE)
+
+head(data)
+
+```
+
+
+
+```{r}
+ts_births <- ts(
+  data$Gjithsej,
+  start = c(min(data$Viti), min(data$Tremujori)),
+  frequency = 4
+)
+
+ts_births
+```
+### Grafikë
+
+```{r}
+plot(ts_births,
+     type = "o",              
+     col = "darkred",
+     pch = 16,                
+     lwd = 2,
+     main = "Lindjet – Seri Kohore (tremujor)",
+     ylab = "Numri i lindjeve",
+     xlab = "Koha")
+
+```
+
+
+### sezonalitet
+
+```{r}
+ #sezonaliteti trendi 
+decomp <- decompose(ts_births) 
+plot(decomp)
+
+```
+Nga grafiku i mësipërm shohim se seria e lindjeve karakterizohet nga sezonalitet i fortë dhe një trend rënës, pjesa  e sezonalitetit na tregon se ka luhatje të rregullta brenda cdo viti ku disa tremujorë kanë sistematikisht më shumë lindje se të tjerët.Trendi tregon  se numri mesatar i lindjeve ka pësuar ulje graduale gjatë viteve të fundit, veçanërisht pas vitit 2017, duke reflektuar një prirje negative në zhvillimin demografik.
+
+
+
+```{r}
+  ggsubseriesplot(ts_births) 
+```
+
+### Grafiku sezonal 
+
+```{r}
+library(forecast)
+library(ggplot2)
+
+ggsubseriesplot(ts_births, color = "black") +
+  geom_line(aes(group = 1), color = "black", linewidth = 0.7) +
+  geom_hline(aes(yintercept = mean(ts_births)), 
+             color = "red", linetype = "dashed", linewidth = 0.7) +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Subseries Plot për Lindjet",
+    subtitle = "Tregon sezonalitetin brenda secilit tremujor",
+    x = "Tremujori",
+    y = "Numri i lindjeve"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 13),
+    strip.text = element_text(size = 14, face = "bold"),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14)
+  )
+
+```
+Grafiku paraqet lëvizjen e lindjeve brenda çdo tremujori (Q1–Q4) ndër vite. Vija blu në secilin panel tregon mesataren sezonale të atij tremujori. Vërehet një model i qartë sezonal: Q3 ka numrin më të lartë të lindjeve, ndërsa Q1 dhe Q4 kanë nivelet më të ulëta. Kjo tregon se seria kohore ka sezonalitet të fortë dhe të qëndrueshëm brenda vitit.
+
+### Kontrolli i stacionaritetit
+```{r}
+library(tseries)
+adf.test(ts_births)
+```
+
+Duke bërë kontrollin nëse seria është stacionare ose jo del që vlera p=0.09401 ku duket që seria jonë është jostacionare
+
+
+---
+
+# Sheshimi ekspoencial
+Në këtë pjesë do të shikojmë zbatimin e sheshimit eksponencial per serinë tonë nepermjet 3 niveleve te sheshimit eksponencal 
+të njëfishtë(SES) pa trend, pa sezonalitet,
+të dyfishtë (Holt) me trend, pa sezonalitet,
+të trefishtë (Holt–Winters) me trend dhe sezonalitet
+
+## Train/testing
+Si fillim do te shikojmë pjesen e trajnimit dhe testimit për serinë tonë
+```{r}
+
+h_test <- 8   # 8 tremujorë = 2 vite të fundit
+n <- length(ts_births)
+cut_point <- time(ts_births)[n - h_test]
+ts_train <- window(ts_births, end = cut_point)
+ts_test <- window(ts_births, start = cut_point + deltat(ts_births))
+ts_train
+ts_test
+
+```
+Seria kohore u nda në train set (2011–2023 Q3) dhe test set (2023 Q4–2025 Q2), duke përdorur 8 tremujorët e fundit si të dhëna testimi. Kjo lejon vlerësimin e saktë të modeleve duke krahasuar parashikimet me vlerat reale që nuk janë përdorur në trajnim.
+
+## Sheshimi eksponencial i njëfishtë
+
+```{r}
+fit_ses <- ses(ts_train,
+               h = h_test,
+               initial = "optimal")
+
+fit_ses
+```
+Për serinë e lindjeve u aplikua modeli i sheshimit eksponencial të njëfishtë (SES).Duke përdorur të dhënat e trajnimit, SES vlerësoi parametrin optimal α dhe prodhoi parashikime konstante për 8 tremujorët e testimit. Të gjitha parashikimet janë rreth vlerës 6036, gjë që tregon se modeli SES nuk arrin të kapë trendin zbritës që vërehet në seri.
+
+
+```{r}
+autoplot(ts_train, series = "Train", color = "black") +
+  autolayer(fitted(fit_ses), series = "Përshtatja (Fitted)", color = "blue") +
+  autolayer(ts_test, series = "Reale (Test)", color = "darkgreen") +
+  autolayer(fit_ses$mean, series = "Parashikimi (SES)", color = "red") +
+  labs(title = "SES – Përshtatja dhe Parashikimi krahasuar me të dhënat reale",
+       x = "Koha",
+       y = "Numri i lindjeve") +
+  guides(colour = guide_legend(title = "Seria")) +
+  theme_minimal()
+
+# Tabela e saktësisë
+acc_ses <- accuracy(fit_ses, ts_test)
+acc_ses
+
+# Kontrolli i mbetjeve
+checkresiduals(fit_ses)
+
+
+```
+Grafiku tregon se modeli SES nuk arrin të përshtatet mirë me serinë e lindjeve. Edhe pse vlerat e përshtatura (qe ne kete rast eshte vija blu) e ndjekin serinë në mënyrë të përgjithshme, ato nuk pasqyrojnë dot sezonalitetin tremujor dhe trendin në rënie.
+Analiza e mbetjeve tregon se modeli SES nuk përshtatet mirë me serinë e lindjeve. Mbetjet paraqesin autokorelacion të fortë  dhe nuk sillen si zhurme e bardhe . Grafiku i ACF dhe histogrami tregojnë se modeli nuk arrin të kapë trendin dhe sezonalitetin e serisë. Prandaj SES nuk është model i përshtatshëm për parashikime në këtë rast.
+
+## Sheshimi eksponenial i dyfishte
+
+```{r}
+fit_holt <- holt(ts_train, h = h_test)
+fit_holt
+```
+Tabela paraqet parashikimet e modelit Holt  për 8 tremujorët e ardhshëm. Ky model merr parasysh trendin në rënie të serisë, ndaj vlerat e parashikuara zbresin gradualisht nga 6073 lindje në 2023 Q3 deri në rreth 5683 lindje në 2025 Q2.
+
+
+```{r}
+autoplot(ts_train, series = "Train", color = "black") +
+  autolayer(fitted(fit_holt), series = "Përshtatja (Fitted)", color = "blue") +
+  autolayer(ts_test, series = "Reale (Test)", color = "darkgreen") +
+  autolayer(fit_holt$mean, series = "Parashikimi (Holt)", color = "red") +
+  labs(title = "Holt – Përshtatja dhe Parashikimi për serinë e lindjeve",
+       x = "Koha",
+       y = "Numri i lindjeve") +
+  guides(colour = guide_legend(title = "Seria")) +
+  theme_minimal()
+
+# Saktësia për modelin Holt
+acc_holt <- accuracy(fit_holt, ts_test)
+acc_holt
+
+# Kontrolli i mbetjeve të modelit Holt
+checkresiduals(fit_holt)
+
+```
+Holt përshtatet mirë me trendin zbritës të lindjeve, por nuk kap sezonalitetin. Në testim, parashikimet janë afër vlerave reale, megjithëse më të lëmuara. Modeli projeksionon një vazhdimësi të rënies së lindjeve në periudhën e ardhshme.
+Rezultatet e saktësisë tregojnë se modeli Holt performon dukshëm më mirë se modeli SES. Gabimet RMSE dhe MAE janë më të ulëta. Holt kap trendin e serisë dhe jep parashikime më të sakta për të dhënat e testit.
+
+## Sheshimi eksponencial i trefishte
+
+```{r}
+# Modeli Holt–Winters me sezonalitet ADDITIV
+fit_hw_add <- hw(ts_train, h = h_test, seasonal = "additive")
+fit_hw_add
+```
+Modeli Holt–Winters me sezonalitet additiv prodhon parashikime që pasqyrojnë si trendin zbritës, ashtu edhe ndryshimet sezonale të lindjeve.
+```{r}
+autoplot(ts_train, series = "Train", color = "black") +
+  autolayer(fitted(fit_hw_add), series = "Përshtatja (Fitted)", color = "blue") +
+  autolayer(ts_test, series = "Reale (Test)", color = "darkgreen") +
+  autolayer(fit_hw_add$mean, series = "Parashikimi (HW Additiv)", color = "red") +
+  labs(title = "Holt–Winters (Additiv) – Përshtatja dhe Parashikimi për lindjet",
+       x = "Koha",
+       y = "Numri i lindjeve") +
+  guides(colour = guide_legend(title = "Seria")) +
+  theme_minimal()
+
+# Saktësia dhe diagnostika (Additiv)
+acc_hw_add <- accuracy(fit_hw_add, ts_test)
+acc_hw_add
+
+checkresiduals(fit_hw_add)
+```
+Modeli Holt–Winters Additiv jep përshtatjen më të mirë për serinë e lindjeve. Ai kap trendin në rënie dhe sezonalitetin tremujor. Parashikimet janë afër vlerave reale të testit, ndërsa mbetjet janë të rastësishme (p-value 0.79), çka tregon se modeli është i specifikuar mirë.
+
+
+```{r}
+fit_hw_mul <- hw(ts_train, h = h_test, seasonal = "multiplicative")
+
+# Grafik: Train (real), Fitted, Test (real), Forecast
+autoplot(ts_train, series = "Train", color = "black") +
+  autolayer(fitted(fit_hw_mul), series = "Përshtatja (Fitted)", color = "blue") +
+  autolayer(ts_test, series = "Reale (Test)", color = "darkgreen") +
+  autolayer(fit_hw_mul$mean, series = "Parashikimi (HW Multiplikativ)", color = "red") +
+  labs(title = "Holt–Winters (Multiplikativ) – Përshtatja dhe Parashikimi për lindjet",
+       x = "Koha",
+       y = "Numri i lindjeve") +
+  guides(colour = guide_legend(title = "Seria")) +
+  theme_minimal()
+
+# Saktësia dhe diagnostika (Multiplikativ)
+acc_hw_mul <- accuracy(fit_hw_mul, ts_test)
+acc_hw_mul
+
+checkresiduals(fit_hw_mul)
+```
+Modeli multiplikativ pasqyron më saktë sezonalitetin e amplitudës së ndryshueshme,ka gabime më të ulëta krahasuar me Holt-in klasik dhe SES, sidomos në periudhën e testimit gjithashtu tregon parashikim të qëndrueshëm dhe të saktë, me devijim relativ shumë të vogël nga vlerat reale dhe mbetjet janë të rastësishme dhe pa strukturë.
+
+
+## Krahasimi i saktësisë së modeleve
+
+```{r}
+library(dplyr)
+library(tibble)
+
+# Tabela e saktësisë për të gjithë modelet
+acc_table <- bind_rows(
+  data.frame(Model = "SES",               accuracy(fit_ses, ts_test)),
+  data.frame(Model = "Holt",              accuracy(fit_holt, ts_test)),
+  data.frame(Model = "HW Additive",       accuracy(fit_hw_add, ts_test)),
+  data.frame(Model = "HW Multiplicative", accuracy(fit_hw_mul, ts_test))
+)
+
+# Përzgjedhja e metrikeve më të rëndësishme dhe renditja sipas RMSE
+acc_table <- acc_table %>%
+  select(Model, RMSE, MAE, MAPE, MASE) %>%
+  arrange(RMSE)
+
+knitr::kable(acc_table,
+             caption = "Krahasimi i performancës së modeleve të parashikimit për serinë e lindjeve")
+```
+Të dhënat tregojnë se Holt–Winters Additiv është modeli më i saktë, me RMSE dhe MAE më të ulët se modelet e tjera. HW Multiplikativ performon mirë, por më dobët se versioni additiv. Modelet SES dhe Holt tregojnë gabime të larta dhe nuk arrijnë të kapin strukturen sezonale të serisë.
+
+###  Modeli më i mirë dhe parashikimi 2 vjecar
+
+```{r}
+best_model <- acc_table$Model[1]
+best_model
+
+
+final_fit <- switch(best_model,
+                    "SES" = ses(ts_births, h = 8),
+                    "Holt" = holt(ts_births, h = 8, damped = FALSE),
+                    "HW Additive" = hw(ts_births, h = 8, seasonal = "additive"),
+                    "HW Multiplicative" = hw(ts_births, h = 8, seasonal = "multiplicative"),
+                    "ETS" = forecast(ets(ts_births), h = 8)
+)
+
+autoplot(final_fit) +
+  ggtitle(paste0("Parashikimi 2-vjeçar (8 tremujorë) me modelin: ", best_model)) +
+  xlab("Koha") +
+  ylab("Numri i lindjeve") +
+  theme_minimal()
+```
+
+Grafiku i parashikimit 2-vjeçar me modelin Holt-Winters Additiv tregon që trendi rënës i lindjeve pritet të vazhdojë. Zona blu shfaq intervalet e besimit (80% dhe 95%), të cilat rriten me kohën, duke reflektuar pasigurinë natyrore të parashikimeve afatgjata. Modeli kap mirë sezonalitetin dhe jep një projeksion realist për tremujorët e ardhshëm.
+
+###  Rezultatet e parashikimit
+
+```{r}
+library(lubridate)
+library(tibble)
+
+t <- time(final_fit$mean)
+
+Viti <- floor(t)
+Tremujori <- round((t - Viti) * 4 + 1)
+
+
+Periudha <- paste0(Viti, "-Q", Tremujori)
+
+
+final_fc_tbl <- tibble(
+  Periudha = Periudha,
+  Parashikim = as.numeric(final_fit$mean),
+  Lwr95 = as.numeric(final_fit$lower[, "95%"]),
+  Upr95 = as.numeric(final_fit$upper[, "95%"])
+)
+
+knitr::kable(final_fc_tbl, caption = "Parashikimi 2-vjeçar (8 tremujorë) me intervalet 95%")
+
+```
+Ky kod gjeneron një tabelë të strukturuar të parashikimit 2-vjeçar, ku secila vlerë e parashikuar shoqërohet me periudhën përkatëse (vit–tremujor) dhe intervalet 95% të besueshmërisë. Tabela ofron informacion të plotë mbi pritshmëritë e modelit dhe pasiguritë e tij, duke e bërë interpretimin e parashikimeve më të qartë dhe më të kuptueshëm.
+
+---
+
+# Proceset MA dhe AR
+
+## Procesi MA(1)
+
+```{r}
+library(forecast)
+
+set.seed(42)
+n <- 100
+
+# Simulimet
+ts_ma_pos <- arima.sim(model = list(ma = 0.5), n = n)
+ts_ma_neg <- arima.sim(model = list(ma = -0.5), n = n)
+
+
+par(mfrow = c(1, 2))
+
+# Grafik 1: theta = 0.5
+plot(ts_ma_pos,
+     type = "l",
+     col = "steelblue",
+     lwd = 2,
+     main = expression(paste("MA(1) me  ", theta[1], " = 0.5")),
+     xlab = "Koha",
+     ylab = "X(t)")
+grid(col = "gray80")
+box(lwd = 1.5)
+
+# Grafik 2: theta = -0.5
+plot(ts_ma_neg,
+     type = "l",
+     col = "tomato",
+     lwd = 2,
+     main = expression(paste("MA(1) me  ", theta[1], " = -0.5")),
+     xlab = "Koha",
+     ylab = "X(t)")
+grid(col = "gray80")
+box(lwd = 1.5)
+
+# Rikthen vendosjen e grafikëve në normale
+par(mfrow = c(1,1))
+
+```
+Procesi MA(1) me θ₁ = 0.5 paraqet lëvizje më të buta për shkak të varësisë pozitive, ndërsa me θ₁ = –0.5 jep luhatje më të shpejta dhe seri më të paqëndrueshme për shkak të varësisë negative mes vlerave.
+
+
+```{r}
+# Simulimi i një procesi MA(1)
+library(forecast)
+
+set.seed(42)
+n <- 100
+ts_ma1_neg05 <- arima.sim(model = list(ma = 1), n = n)
+
+# Grafik i përmirësuar
+plot(ts_ma1_neg05,
+     type = "l",                
+     col = "darkorange",         
+     lwd = 2,                   
+     main = expression(paste("Simulimi i procesit MA(1) me  ", theta[1], " = 1")),
+     xlab = "Koha",
+     ylab = "X(t)")
+
+grid(col = "gray80")            
+box(lwd = 1.5)                  
+```
+
+
+## ACF, ACVF, dhe PACF për Proceset  MA(1)
+
+```{r}
+# Simulimi i procesit MA(1) me theta = -0.5
+set.seed(42)
+ts_ma1_neg05 <- arima.sim(model = list(ma = -0.5), n = 100)
+
+# ACF dhe PACF për procesin MA(1)
+par(mfrow = c(1, 2))
+
+acf(ts_ma1_neg05,
+    main = expression(paste("ACF për MA(1) me ", theta[1], " = -0.5")),
+    col = "darkred",         
+    lwd = 2)
+
+pacf(ts_ma1_neg05,
+     main = expression(paste("PACF për MA(1) me ", theta[1], " = -0.5")),
+     col = "darkblue",       
+     lwd = 2)
+
+```
+```{r}
+# Simulimi i procesit MA(1) me theta = 0.5
+set.seed(42)
+ts_ma1_neg05 <- arima.sim(model = list(ma = 0.5), n = 100)
+
+# ACF dhe PACF për procesin MA(1)
+par(mfrow = c(1, 2))
+
+acf(ts_ma1_neg05,
+    main = expression(paste("ACF për MA(1) me ", theta[1], " = 0.5")),
+    col = "purple",         
+    lwd = 2)
+
+pacf(ts_ma1_neg05,
+     main = expression(paste("PACF për MA(1) me ", theta[1], " = 0.5")),
+     col = "green",       
+     lwd = 2)
+
+
+```
+
+```{r}
+# Simulimi i procesit MA(1) me theta = -1
+set.seed(42)
+ts_ma1_neg05 <- arima.sim(model = list(ma = 1), n = 100)
+
+# ACF dhe PACF për procesin MA(1)
+par(mfrow = c(1, 2))
+
+acf(ts_ma1_neg05,
+    main = expression(paste("ACF për MA(1) me ", theta[1], " = 1")),
+    col = "brown",        
+    lwd = 2)
+
+pacf(ts_ma1_neg05,
+     main = expression(paste("PACF për MA(1) me ", theta[1], " = 1 ")),
+     col = "pink",       
+     lwd = 2)
+
+```
+
+
+## MA(2)
+
+```{r}
+# Koeficientët arbitrarë: theta1 = 0.9, theta2 = -0.3
+set.seed(42)
+ts_ma2 <- arima.sim(model = list(ma = c(0.9, -0.3)), n = n)
+
+plot(ts_ma2,
+     type = "l",
+     col = "darkblue",   
+     lwd = 2,            
+     main = expression(paste("Simulimi i procesit MA(2) me ", 
+                             theta[1], "=0.9, ", theta[2], "=-0.3")),
+     ylab = "X(t)",
+     xlab = "Koha")
+
+grid(col = "lightgray") 
+
+```
+```{r}
+par(mfrow = c(1, 2))
+
+acf(ts_ma2,
+    main = "ACF për MA(2)",
+    col = "navy",     
+    lwd = 2)
+
+pacf(ts_ma2,
+     main = "PACF për MA(2)",
+     col = "magenta",   
+     lwd = 2)
+
+```
+## MA(3)
+```{r}
+# Koeficientët arbitrarë: thet1=0.5, thet2=0.3, thet3=0.2
+ts_ma3 <- arima.sim(model = list(ma = c(0.5, 0.3, 0.2)), n = n)
+
+par(mfrow = c(1, 2))
+acf(ts_ma3,
+    main = "ACF per MA(3)",
+    col="darkgreen",
+    lwd=2)
+pacf(ts_ma3,
+     main = "PACF per MA(3)",
+     col="gold",
+     lwd=2)
+```
+
+```{r}
+# SIMULIMI I PROCESIT MA(35)
+
+set.seed(42)
+n <- 200  
+
+# Krijojmë 35 koeficientë MA
+ma_params_35 <- c(
+  0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1,
+  rep(0.05, 10),
+  rep(0.02, 10),
+  rep(0, 7)  # pjesa tjetër zero që plotëson 35 koeficientë
+)
+
+# Simulimi
+ts_ma35 <- arima.sim(model = list(ma = ma_params_35), n = n)
+
+
+par(mfrow = c(1, 2), mar = c(4, 4, 4, 1))
+
+acf(ts_ma35,
+    main = "ACF për MA(35)",
+    lag.max = 40,
+    col = "darkred",   
+    lwd = 2)
+
+pacf(ts_ma35,
+     main = "PACF për MA(35)",
+     lag.max = 40,
+     col = "darkblue", 
+     lwd = 2)
+
+```
+Si shembull bëjmë dhe MA(35)
+
+## AR(2)
+
+```{r}
+# Simulimi i procesit AR(1) me phi = 0.8
+set.seed(42)
+n_sim <- 100
+
+ts_ar1_pos08 <- arima.sim(model = list(ar = 0.8), n = n_sim)
+
+plot(ts_ar1_pos08,
+     type = "l",
+     col = "darkblue",   
+     lwd = 2,            
+     main = expression(paste("Simulimi i procesit AR(1) me ", phi[1], " = 0.8")),
+     ylab = "X(t)",
+     xlab = "Koha")
+
+grid(col = "lightgray") 
+
+```
+
+```{r}
+par(mfrow = c(1, 2))
+
+acf(ts_ar1_pos08,
+    main = expression(paste("ACF për AR(1) me ", phi[1], " = 0.8")),
+    col = "skyblue",  
+    lwd = 2)
+
+pacf(ts_ar1_pos08,
+     main = expression(paste("PACF për AR(1) me ", phi[1], " = 0.8")),
+     col = "purple",    
+     lwd = 2)
+
+```
+```{r}
+# Simulimi i procesit AR(2)
+set.seed(42)
+ts_ar2 <- arima.sim(model = list(ar = c(0.6, -0.3)), n = n)
+
+par(mfrow = c(1, 2))
+
+acf(ts_ar2,
+    main = "ACF për AR(2)",
+    col = "lightgreen",    
+    lwd = 2)
+
+pacf(ts_ar2,
+     main = "PACF për AR(2)",
+     col = "lightblue",    
+     lwd = 2)
+
+```
+
+```{r}
+# Simulimi i procesit AR(11)
+set.seed(42)
+
+phi_ar11 <- c(0.5, -0.2, 0.15, -0.1, 0.08, -0.06, 0.05, -0.04, 0.03, -0.02, 0.01)
+
+ts_ar11 <- arima.sim(model = list(ar = phi_ar11), n = n)
+
+par(mfrow = c(1, 2))
+
+acf(ts_ar11,
+    main = "ACF për AR(11)",
+    col = "yellow",     
+    lwd = 2)
+
+pacf(ts_ar11,
+     main = "PACF për AR(11)",
+     col = "darkorange",
+     lwd = 2)
+
+```
+Si shembull kemi bërë dhe AR(11)
+
+## ARMA
+
+```{r}
+# Koeficientët arbitrarë: phi1=0.7, theta1=0.5
+ts_arma11 <- arima.sim(model = list(ar = c(0.7), ma = c(0.5)), n = n)
+
+par(mfrow = c(1, 2))
+acf(ts_arma11,
+    col="black",
+    lwd=2,
+    main = "ACF per ARMA(1, 1)")
+pacf(ts_arma11,
+     main = "PACF per ARMA(1, 1)",
+     col="gray",lwd=2)
+```
+ACF e modelit ARMA(1,1) zbehet gradualisht, duke treguar ndërthurjen e komponentëve AR dhe MA. PACF ka vetëm lag-un e parë sinjifikant, ndërsa të tjerët janë të vegjël, çka është tipike për një proces ARMA(1,1).
+
+```{r}
+par(mfrow = c(1, 1))
+```
+
+---
+
+
+# Analiza e serive kohore me modelete MA AR ARMA
+
+
+Ndajmë edhe  njëherë serin tonë në trajnim/testim per serinë tonë
+```{r}
+h_test <- 8                     # 2 vite test për seri tremujore
+n <- length(ts_births)
+
+ts_train <- window(ts_births, end = time(ts_births)[n - h_test])
+ts_test  <- window(ts_births, start = time(ts_births)[n - h_test + 1])
+
+```
+
+
+```{r}
+q_order <- 4
+# Modelimi MA(2). Diferencimi (d) dhe Autoregresioni (p) vendosen në 0.
+model_ma <- arima(ts_train, order = c(0, 0, q_order))
+```
+
+## Ndërtimi i modelit MA(2)
+
+```{r}
+# Përcaktojmë rendin q
+q_order <- 2
+
+# Modelimi MA(2) mbi të dhënat e trajnimit (ts_train)
+model_ma <- arima(ts_train, order = c(0, 0, q_order))
+
+# Afishimi i Modelit MA(2)
+cat("### Përmbledhja e Modelit MA(2) ###\n")
+print(model_ma)
+```
+```{r}
+print(summary(model_ma))
+```
+
+```{r}
+# Parashikimi për modelin MA(q)
+forecast_ma <- forecast(model_ma, h = h_test)
+
+
+plot(forecast_ma,
+     main = paste("Modeli MA(", q_order, "): Përshtatja dhe Parashikimi për Lindjet"),
+     xlab = "Koha",
+     ylab = "Numri i Lindjeve",
+     xlim = range(time(ts_births)))
+
+
+lines(fitted(model_ma), col = "blue")
+
+
+lines(ts_test, col = "red", lty = 2)
+
+legend("topleft",
+       legend = c("Seria e trajnimit (reale)",
+                  "Seria e përshtatur (MA)",
+                  "Parashikimi (MA)",
+                  "Seria e testimit (reale)"),
+       col = c("black", "blue", "blue", "red"),
+       lty = c(1, 1, 2, 2),
+       cex = 0.8)
+```
+Modeli MA(2) përshtatet mirë me të dhënat historike, por parashikimet në periudhën e testimit tregojnë devijime nga vlerat reale.
+
+```{r}
+# Nxjerrim kohet nga ts_test
+t_test <- time(ts_test)
+
+# Konvertojmë në formatin Viti–Tremujori
+Viti <- floor(t_test)
+Tremujori <- round((t_test - Viti) * 4 + 1)
+Periudha <- paste0(Viti, "-Q", Tremujori)
+
+# Ndërtojmë tabelën e krahasimit
+rez_ma <- data.frame(
+  Periudha = Periudha,
+  Parashikimi_MA = as.numeric(forecast_ma$mean),
+  Vlera_Reale = as.numeric(ts_test)
+)
+
+print(head(rez_ma, 10))
+
+```
+Parashikimet e MA(2) janë të afërta në fillim të periudhës së testimit, por më pas modeli stabilizohet në një vlerë konstante dhe nuk pasqyron rënien reale të lindjeve, duke treguar kufizime në parashikimet afatgjata.
+
+## Ndertimi i modelit AR(2)
+
+```{r}
+# Përcaktojmë rendin p
+p_order <- 2
+
+# Modelimi AR(2) mbi të dhënat e trajnimit (ts_train)
+model_ar <- arima(ts_train, order = c(p_order, 0, 0))
+
+# Afishimi i Modelit AR(2)
+cat("### Përmbledhja e Modelit AR(2) ###\n")
+print(model_ar)
+```
+
+```{r}
+print(summary(model_ar))
+```
+
+```{r}
+# Parashikimi (Forecast) për periudhën e testimit
+forecast_ar <- forecast(model_ar, h = h_test)
+
+
+plot(forecast_ar,
+     main = paste("Modeli AR(", p_order, "): Përshtatja dhe Parashikimi për Lindjet"),
+     xlab = "Koha",
+     ylab = "Numri i Lindjeve",
+     xlim = range(time(ts_births)))
+
+
+lines(fitted(model_ar), col = "blue")
+
+
+lines(ts_test, col = "red", lty = 2)
+
+legend("topleft",
+       legend = c("Seria e trajnimit (reale)",
+                  "Seria e përshtatur (AR)",
+                  "Parashikimi (AR)",
+                  "Seria e testimit (reale)"),
+       col = c("black", "blue", "blue", "red"),
+       lty = c(1, 1, 2, 2),
+       cex = 0.8)
+```
+
+Modeli AR(2) përshtatet mirë me të dhënat historike, por parashikimet për periudhën e testimit dallojnë ndjeshëm nga vlerat reale. Kjo tregon se modeli kap strukturën afatshkurtër të serisë, por ka kufizime në parashikime afatgjata për shkak të variabilitetit të lartë të lindjeve.
+
+```{r}
+# Koha e ts_test si vite të plotë + tremujor
+t_test <- time(ts_test)
+
+
+Viti <- floor(t_test)
+Tremujori <- round((t_test - Viti) * 4 + 1)
+Periudha <- paste0(Viti, "-Q", Tremujori)
+
+
+rez_ar <- data.frame(
+  Periudha = Periudha,
+  Parashikimi_AR = as.numeric(forecast_ar$mean),
+  Vlera_Reale = as.numeric(ts_test)
+)
+
+print(head(rez_ar, 10))
+```
+
+Parashikimet AR janë të afërta në fillim të periudhës së testimit, por më pas modeli mbivlerëson lindjet dhe nuk kap rënien reale të serisë, duke treguar kufizime në parashikimet afatgjata.
+
+
+## Gjetja e modelit më të përshtatshëm
+```{r}
+# Zgjedhja automatike e modelit AR(p) pa MA dhe pa diferencim
+model_ar_auto <- auto.arima(ts_train,
+                            max.q = 0,       
+                            max.d = 0,       
+                            seasonal = FALSE,
+                            stepwise = FALSE,
+                            ic = "aicc")
+
+cat("### Modeli AR(p) më i përshtatshëm i zgjedhur nga auto.arima ###\n")
+print(model_ar_auto)
+```
+Nga rezultai i meëipërm gjejmë se modeli më i përshtatshëm është AR(3), i cili jep koeficientë të rëndësishëm dhe gabime më të ulëta se modelet e tjera të testuara.
+
+```{r}
+cat("Rendi i zgjedhur (p, d, q):\n")
+```
+
+```{r}
+print(model_ar_auto)
+```
+
+
+
+```{r}
+# Gjetja e modelit më të përshtatshëm ARIMA/ARMA automatikisht (lejohet d>0 dhe komponente sezonale)
+
+
+model_arma_auto <- auto.arima(ts_births, 
+                           stepwise = FALSE, 
+                           approximation = FALSE, 
+                           ic = "aicc") 
+
+cat("### Modeli ARIMA/ARMA/SARIMA më i Përshtatshëm i zgjedhur nga auto.arima ###\n")
+```
+```{r}
+# Parashikimi për periudhën e testimit
+forecast_arma_auto <- forecast(model_arma_auto, h = h_test)
+
+# Grafik i serisë së përshtatur dhe parashikimit
+plot(forecast_arma_auto,
+     main = paste("Modeli i Zgjedhur ARIMA(",
+                  model_arma_auto$arma[1], ",",
+                  model_arma_auto$arma[6], ",",
+                  model_arma_auto$arma[2], ") - Përshtatja dhe Parashikimi për Lindjet"),
+     xlab = "Koha",
+     ylab = "Numri i Lindjeve",
+     xlim = range(time(ts_births)))
+
+# Vlerat e përshtatura (training)
+lines(fitted(model_arma_auto), col = "blue")
+
+# Vlerat reale të testimit
+lines(ts_test, col = "red", lty = 2)
+
+legend("topleft",
+       legend = c("Seria e Trajnimit (Reale)",
+                  "Seria e Përshtatur (ARIMA)",
+                  "Parashikimi (ARIMA)",
+                  "Seria e Testimit (Reale)"),
+       col = c("black", "blue", "blue", "red"),
+       lty = c(1, 1, 2, 2),
+       cex = 0.8)
+```
+Modeli ARIMA(0,0,3) përshtatet shumë mirë me të dhënat historike, por gjatë periudhës së testimit fillon të mbivlerësojë lindjet dhe nuk kap rënien e viteve të fundit, duke treguar kufizime në parashikimet afatgjata.
+
+```{r}
+# Konvertimi i kohës së ts_test në formatin Viti–Tremujori
+t_test <- time(ts_test)
+Viti <- floor(t_test)
+Tremujori <- round((t_test - Viti) * 4 + 1)
+Periudha <- paste0(Viti, "-Q", Tremujori)
+
+# Tabela krahasuese (ARIMA/ARMA)
+rez_arma <- data.frame(
+  Periudha = Periudha,
+  Parashikimi_ARMA = as.numeric(forecast_arma_auto$mean),
+  Vlera_Reale = as.numeric(ts_test)
+)
+
+print(head(rez_arma, 10))
+```
+Modeli ARMA/ARIMA jep parashikime më të realizta për periudhat e fundit të testimit dhe reflekton më mirë rënien e lindjeve krahasuar me modelet e tjera, megjithëse devijime ende ekzistojnë.
+
+
+
+
+
+
+
+```{r}
+
+library(dplyr)
+library(forecast)
+library(knitr)
+library(kableExtra)
+
+# Funksioni për llogaritjen e gabimeve
+calculate_errors <- function(actual, predicted) {
+  errors <- actual - predicted
+  rmse <- sqrt(mean(errors^2, na.rm = TRUE))
+  mae  <- mean(abs(errors), na.rm = TRUE)
+  mape <- mean(abs(errors / actual), na.rm = TRUE) * 100
+  
+  data.frame(
+    RMSE = rmse,
+    MAE  = mae,
+    MAPE = mape
+  )
+}
+
+
+# Gabimet e Trajnimit
+errors_train_ma   <- calculate_errors(ts_train, fitted(model_ma))
+errors_train_ar   <- calculate_errors(ts_train, fitted(model_ar))
+errors_train_arma <- calculate_errors(ts_train, fitted(model_arma_auto))
+
+
+# Gabimet e Testimit
+errors_test_ma   <- calculate_errors(ts_test, as.numeric(forecast_ma$mean))
+errors_test_ar   <- calculate_errors(ts_test, as.numeric(forecast_ar$mean))
+errors_test_arma <- calculate_errors(ts_test, as.numeric(forecast_arma_auto$mean))
+
+
+# Krijimi i tabelës përfundimtare
+results_table <- bind_rows(
+  
+  mutate(errors_train_ma,
+         Model = "MA(2)",
+         Seksioni = "Trajnim"),
+  
+  mutate(errors_test_ma,
+         Model = "MA(2)",
+         Seksioni = "Testim"),
+  
+  mutate(errors_train_ar,
+         Model = paste0("AR(", model_ar$arma[1], ")"),
+         Seksioni = "Trajnim"),
+  
+  mutate(errors_test_ar,
+         Model = paste0("AR(", model_ar$arma[1], ")"),
+         Seksioni = "Testim"),
+  
+  mutate(errors_train_arma,
+         Model = paste0("ARIMA(",
+                        model_arma_auto$arma[1], ", ",
+                        model_arma_auto$arma[6], ", ",
+                        model_arma_auto$arma[2], ")"),
+         Seksioni = "Trajnim"),
+  
+  mutate(errors_test_arma,
+         Model = paste0("ARIMA(",
+                        model_arma_auto$arma[1], ", ",
+                        model_arma_auto$arma[6], ", ",
+                        model_arma_auto$arma[2], ")"),
+         Seksioni = "Testim")
+  
+) %>%
+  select(Seksioni, Model, RMSE, MAE, MAPE)
+
+
+# SHFAQJA E TABELËS 
+results_table %>%
+  knitr::kable(
+    caption = "Krahasimi i Metrikave të Gabimit (RMSE, MAE, MAPE)",
+    col.names = c("Seksioni", "Modeli", "RMSE", "MAE", "MAPE"),
+    digits = c(0, 0, 2, 2, 2),
+    booktabs = TRUE,
+    align = c("l", "l", "r", "r", "r")
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center"
+  )
+
+```
+
+
+
+ARIMA(0,0,3) ka gabimet më të ulëta në trajnim dhe testim, duke qenë modeli më i saktë. Modelet MA dhe AR(2) performojnë dobët në testim, me gabime të larta dhe mungesë aftësie për të kapur rënien reale të lindjeve.
+
+
+# Shtesa
+
+## Modeli NNETAR 
+Ne kete pjese te studimit jemi marre me shume me modelet linear MA AR ARIMA por marrim dhe nje model jolinear i quajtur NNETAR (neural network autoregresiv).Ky model përdor vlerat e kaluara të serisë si input në një rrjet nervor me një shtresë të fshehtë dhe lejon kapjen e marrëdhënieve jolineare mes tremujorëve.
+
+```{r}
+## Modeli NNETAR (Neural Network Autoregresiv)
+
+library(forecast)
+
+set.seed(123)  
+model_nnet <- nnetar(ts_train)
+
+cat("### Përmbledhja e Modelit NNETAR ###\n")
+print(summary(model_nnet))
+
+forecast_nnet <- forecast(model_nnet, h = h_test)
+
+```
+modeli NNETAR ka ndërtuar një rrjet nervor autoregresiv me 4 vonesa të serisë dhe një neuron të fshehtë, duke trajnuar 20 versione të rrjetit për të marrë një parashikim më të qëndrueshëm. Ky model kap marrëdhënie jolineare që modelet ARIMA nuk i përfshijnë.
+
+```{r}
+## Grafiku i përshtatjes dhe parashikimit të modelit NNETAR
+
+plot(ts_births,
+     xlab = "Koha",
+     ylab = "Numri i Lindjeve",
+     main = "Modeli NNETAR: Përshtatja dhe Parashikimi për Lindjet",
+     col  = "brown")
+
+lines(fitted(model_nnet), col = "darkgreen")
+
+lines(forecast_nnet$mean, col = "darkgreen", lty = 2)
+
+lines(ts_test, col = "darkorange", lty = 2)
+
+legend("topleft",
+       bty = "n",
+       lwd = c(1, 1, 1),
+       lty = c(1, 1, 2),
+       col = c("brown", "darkgreen", "darkorange"),
+       legend = c("Seria reale (e plotë)",
+                  "Seria e përshtatur (NNETAR)",
+                  "Seria e testimit / parashikimi"))
+
+```
+Modeli NNETAR përshtatet mirë me të dhënat e trajnimit dhe kap sezonalitetin e fortë të lindjeve. Në periudhën e testimit, modeli ruan stabilitetin dhe gjeneron parashikime të arsyeshme, shpesh të afërta me vlerat reale.
+
+```{r}
+## Metrikat e gabimit për modelin NNETAR
+
+acc_nnet <- accuracy(forecast_nnet, ts_test)
+acc_nnet
+
+```
+
+Metrikat e gabimit tregojnë se modeli NNETAR përshtatet mirë me të dhënat historike . Në periudhën e testimit gabimet rriten, por parashikimet mbeten të sakta në përgjithësi. Vlera Theil’s U = 0.69 tregon se modeli parashikon më mirë se një model naiv dhe kap si trendin ashtu edhe sezonalitetin e serisë.
+
+
+## Analiza spektrale
+
+```{r}
+## Analiza Spektrale e Serisë së Lindjeve: Periodogram + Spektri i Lëmuar
+
+par(mfrow = c(1, 2))
+
+# Periodogrami i thjeshtë
+spec.pgram(ts_births,
+           log = "no",
+           main = "Periodogrami i Serisë së Lindjeve",
+           xlab = "Frekuenca",
+           ylab = "Densiteti Spektral",
+           col = "darkblue")
+
+# Spectral density e lëmuar
+spec.pgram(ts_births,
+           spans = c(5, 5),
+           log = "no",
+           main = "Densiteti Spektral i Lëmuar",
+           xlab = "Frekuenca",
+           ylab = "Densiteti Spektral",
+           col = "red")
+
+
+```
+
+Analiza spektrale tregon një kulm shumë të qartë rreth frekuencës 0.25, e cila korrespondon me një periudhë prej 4 tremujorësh. Kjo konfirmon praninë e një sezonaliteti vjetor të fortë në serinë e lindjeve. Spektri i lëmuar thekson akoma më qartë këtë frekuencë dominuese, duke treguar se cikli sezonal është ritmik dhe i qëndrueshëm gjatë viteve.
+
+
+
+## Krahasimi i modeleve 
+```{r}
+library(ggplot2)
+library(forecast)
+
+
+fc_ma <- forecast(model_ma, h = h_test)
+fc_ar <- forecast(model_ar, h = h_test)
+fc_arima <- forecast(model_ar_auto, h = h_test)
+fc_nnet <- forecast(model_nnet, h = h_test)
+
+df_compare <- data.frame(
+  Koha = time(ts_test),
+  Reale = as.numeric(ts_test),
+  MA = as.numeric(fc_ma$mean),
+  AR = as.numeric(fc_ar$mean),
+  ARIMA = as.numeric(fc_arima$mean),
+  NNETAR = as.numeric(fc_nnet$mean)
+)
+
+ggplot(df_compare, aes(x = Koha)) +
+  geom_line(aes(y = Reale, color = "Reale"), size = 1.2) +
+  geom_line(aes(y = MA, color = "MA(2)")) +
+  geom_line(aes(y = AR, color = "AR(2)")) +
+  geom_line(aes(y = ARIMA, color = "ARIMA")) +
+  geom_line(aes(y = NNETAR, color = "NNETAR"), linetype = "dashed", size = 1.1) +
+  scale_color_manual(values = c(
+    "Reale" = "black",
+    "MA(2)" = "brown",
+    "AR(2)" = "orange",
+    "ARIMA" = "blue",
+    "NNETAR" = "purple"
+  )) +
+  ggtitle("Krahasimi i Parashikimeve midis Modeleve") +
+  xlab("Koha") + ylab("Numri i Lindjeve") +
+  theme_minimal(base_size = 14) +
+  theme(legend.title = element_blank())
+
+```
+
+## Stabiliteti i modeleve në kohë
+
+```{r}
+rolling_rmse <- function(ts_data, model_type = c("MA", "AR", "ARIMA"),
+                         window = 40) {
+  
+  model_type <- match.arg(model_type)
+  n <- length(ts_data)
+  rmse_values <- numeric(n - window)
+  
+  for (i in seq_len(n - window)) {
+    
+    train <- ts_data[i:(i + window - 1)]
+    test  <- ts_data[i + window]
+    
+    if (model_type == "MA") {
+      fit <- Arima(train, order = c(0, 0, 2))
+    }
+    
+    if (model_type == "AR") {
+      fit <- Arima(train, order = c(model_ar$arma[1], 0, 0))
+    }
+    
+    if (model_type == "ARIMA") {
+      fit <- auto.arima(train, seasonal = FALSE)
+    }
+    
+    forecast_val <- forecast(fit, h = 1)$mean
+    rmse_values[i] <- sqrt((test - forecast_val)^2)
+  }
+  
+  return(rmse_values)
+}
+
+
+rmse_ma_roll    <- rolling_rmse(ts_train, "MA")
+rmse_ar_roll    <- rolling_rmse(ts_train, "AR")
+rmse_arima_roll <- rolling_rmse(ts_train, "ARIMA")
+
+
+plot(rmse_ma_roll, type = "l", col = "blue", lwd = 2,
+     main = "Rolling RMSE – Stabiliteti i Modeleve",
+     xlab = "Dritarja Kohore", ylab = "RMSE")
+
+lines(rmse_ar_roll, col = "red", lwd = 2)
+lines(rmse_arima_roll, col = "darkgreen", lwd = 2)
+
+legend("topright",
+       legend = c("MA", "AR", "ARIMA"),
+       col = c("blue", "red", "darkgreen"),
+       lwd = 2)
+
+
+
+```
+
+Nga grafiku vërehet se modelet MA dhe AR shfaqin variabilitet të konsiderueshëm të RMSE-së në dritare të ndryshme kohore, duke treguar ndjeshmëri të lartë ndaj përzgjedhjes së mostrës së trajnimit dhe ndryshimeve në strukturën e serisë.Në kontrast, modeli ARIMA paraqet një sjellje më të qëndrueshme, me luhatje më të moderuara të gabimit dhe me vlera përgjithësisht më të ulëta të RMSE-së gjatë gjithë periudhës së vlerësimit.
+
+
+
+
+## Krahasimi statistik i parashikimeve
+
+
+```{r}
+# Gabimet 1-hap përpara
+errors_ma <- ts_test - as.numeric(forecast_ma$mean)
+errors_ar <- ts_test - as.numeric(forecast_ar$mean)
+errors_arima <- ts_test - as.numeric(forecast_arma_auto$mean)
+
+# Heqim NA nëse ekzistojnë
+errors_ma <- na.omit(errors_ma)
+errors_ar <- na.omit(errors_ar)
+errors_arima <- na.omit(errors_arima)
+
+# MA vs AR
+dm_ma_ar <- dm.test(
+  errors_ma,
+  errors_ar,
+  h = 1,
+  power = 2
+)
+
+# AR vs ARIMA
+dm_ar_arima <- dm.test(
+  errors_ar,
+  errors_arima,
+  h = 1,
+  power = 2
+)
+
+# MA vs ARIMA
+dm_ma_arima <- dm.test(
+  errors_ma,
+  errors_arima,
+  h = 1,
+  power = 2
+)
+
+dm_ma_ar
+dm_ar_arima
+dm_ma_arima
+
+
+dm_results <- data.frame(
+  Krahasimi = c("MA vs AR", "AR vs ARIMA", "MA vs ARIMA"),
+  Statistik_DM = c(
+    dm_ma_ar$statistic,
+    dm_ar_arima$statistic,
+    dm_ma_arima$statistic
+  ),
+  p_value = c(
+    dm_ma_ar$p.value,
+    dm_ar_arima$p.value,
+    dm_ma_arima$p.value
+  )
+)
+
+dm_results %>%
+  knitr::kable(
+    caption = "Rezultatet e Testit Diebold–Mariano",
+    digits = c(0, 3, 4),
+    booktabs = TRUE,
+    col.names = c("Krahasimi", "Statistika DM", "p-value"),
+    align = c("l", "r", "r")
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center"
+  )
+
+```
+
+
+Të tre testet Diebold–Mariano rezultojnë statistikisht të rëndësishme (p < 0.05), duke treguar se modeli ARIMA ofron parashikime më të sakta krahasuar me modelet MA dhe AR. 
+
+
+# Përfundime
+
+Gjatë analizimit të kësaj serie kohore u konstatua se lindjet në Shqipëri shfaqin një trend të qartë rënës, i shoqëruar me komponentë sezonalë të përsëritur, ku disa tremujorë paraqesin nivele më të ulëta lindjesh çdo vit. Këto karakteristika tregojnë se seria nuk është thjesht stacionare, por ndikohet nga faktorë strukturorë afatgjatë dhe luhatje periodike.
+Nga modelet e ndërtuara dhe të vlerësuara, modeli SARIMA rezulton më i përshtatshmi për përshkrimin e sjelljes së serisë, pasi arrin të kapë njëkohësisht trendin rënës dhe sezonalitetin e pranishëm në të dhëna. Analiza e stabilitetit përmes metodës së rolling RMSE tregon se ky model ofron performancë më të qëndrueshme në kohë, duke ruajtur gabime më të ulëta dhe më pak të luhatshme krahasuar me modelet alternative.
+Modeli NNETAR shfaq aftësi të mira në kapjen e lëvizjeve jolineare dhe të ndryshimeve afatshkurtra në seri, duke ndjekur dridhjet lokale të të dhënave.
+Modeli ARIMA(0,0,3) rezulton relativisht i qëndrueshëm në trajnime, por në periudhën e testimit tenton të mbivlerësojë lindjet, duke u shkëputur nga vlerat reale në fund të horizontit parashikues. Nga ana tjetër, modeli AR(2) kap më mirë strukturën dinamike të serisë, por nuk arrin të përfshijë në mënyrë të qartë komponentën sezonalë, ndërsa modeli MA(2) fokusohet kryesisht në lëvizjet afatshkurtra.
+Në tërësi, rezultatet e këtij studimi sugjerojnë se rënia e lindjeve në Shqipëri është një fenomen i vazhdueshëm, i cili pritet të thellohet edhe më tej në vitet në vijim.
+
