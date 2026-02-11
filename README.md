@@ -26,5 +26,14 @@ The goal is to study trends, seasonality, and patterns over time.
 - analysis.html – rendered report
 - births_albania.csv – dataset
 
+## Live Report
+
+Download and open the full report here:
+
+[Download Full HTML Report](./AurelSheremetaj_Sk_lindjet.html)
+
+
+Open it in your browser to view the complete analysis with graphs and tables.
+
 ## Author
 Aurel Sheremetaj
